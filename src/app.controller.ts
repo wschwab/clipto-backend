@@ -1,27 +1,15 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpException,
-  HttpStatus,
-  Param,
-  Post,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Body, Controller, Get, HttpException, HttpStatus, Param, Post } from '@nestjs/common';
 import { VerifiedUser, Request } from '@prisma/client';
 import { AppService } from './app.service';
 import { VerifyUserDto } from './dto/VerifyUser.dto';
 import { UserService } from './services/user.service';
-import * as fs from 'fs';
-import { Bundlr } from '@bundlr-network/client';
-import * as mime from 'mime-types';
 import { CreateUserDto } from './dto/CreateUserDto';
 import { CreateRequestDto } from './dto/CreateRequestDto';
 import { RequestService } from './services/request.service';
 import { BlockchainService } from './services/blockchain.service';
 import { FinishRequestDto } from './dto/FinishRequestDto';
+import { UploadFileDto } from './dto/UploadFileDto';
+import axios from 'axios';
 
 @Controller()
 export class AppController {
@@ -30,7 +18,7 @@ export class AppController {
     private readonly userService: UserService,
     private readonly blockchainService: BlockchainService,
     private readonly requestService: RequestService,
-  ) { }
+  ) {}
   @Get('users')
   public async getUsers(): Promise<Array<VerifiedUser> | any> {
     const result = await this.userService.users({});
@@ -109,12 +97,16 @@ export class AppController {
   }
 
   @Get('request/creator/:address/:requestId')
-  public async requestByCreatorAndRequestId(@Param('address') address: string, @Param('requestId') requestId: string): Promise<Request> {
+  public async requestByCreatorAndRequestId(
+    @Param('address') address: string,
+    @Param('requestId') requestId: string,
+  ): Promise<Request> {
     const result = await this.requestService.requests({ where: { creator: address, requestId: parseInt(requestId) } });
     if (!result) {
       throw new HttpException('Not found', HttpStatus.NOT_FOUND);
     }
-    if (result[1]) { //if length has more than one entry, this should be unique and something is very wrong
+    if (result[1]) {
+      //if length has more than one entry, this should be unique and something is very wrong
       throw new HttpException('Hackers or bugs?', HttpStatus.NOT_FOUND);
     }
     return result[0];
@@ -128,15 +120,9 @@ export class AppController {
   }
   //todo: request / profile updates, these have to be predecated against signTypedData_v4 from users, as well as checking the relevant TXes
 
-  // @Post('upload')
-  // @UseInterceptors(FileInterceptor('asset'))
-  // async uploadFile(@UploadedFile() file: Express.Multer.File) {
-  //   const uploadResult = await this.bundlr.uploader.upload(file.buffer, [
-  //     {
-  //       name: 'Content-Type',
-  //       value: mime.lookup(file.originalname) || 'unknown',
-  //     },
-  //   ]);
-  //   return { result: `ar://${uploadResult.data.id}` };
-  // }
+  //todo: make UploadFileDto take signTypedData v4, validate address against list of creators
+  @Post('upload')
+  async uploadFile(@Body() uploadFileDto: UploadFileDto) {
+    return (await axios.post(process.env.GLASS_API_URL, { ...uploadFileDto })).data;
+  }
 }

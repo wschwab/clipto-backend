@@ -17,4 +17,13 @@ export class BlockchainService {
 
     return txReceipt.status === 1 && tx.value.gte(ethers.utils.parseEther(value)) && creator === params[0];
   }
+
+  public async validateDeliverTx(txHash: string, index: number, creator: string): Promise<boolean> {
+    const tx = await this.ethers.getTransaction(txHash);
+    const txReceipt = await this.ethers.getTransactionReceipt(txHash);
+
+    const params = ethers.utils.defaultAbiCoder.decode(['uint256', 'string'], ethers.utils.hexDataSlice(tx.data, 4));
+
+    return txReceipt.status === 1 && txReceipt.from === creator && params[0].toNumber() === index;
+  }
 }

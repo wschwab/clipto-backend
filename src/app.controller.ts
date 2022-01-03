@@ -112,9 +112,10 @@ export class AppController {
     }
     return result[0];
   }
+
   @Post('request/finish')
   public async requestFinish(@Body() finishRequestDto: FinishRequestDto) {
-    if (true) {
+    if (await this.blockchainService.validateDeliverTx(finishRequestDto.txHash, finishRequestDto.creatorAddress)) {
       return this.requestService.updateRequest({ where: { id: finishRequestDto.id }, data: { delivered: true } });
     }
     //throw new HttpException('Invalid associated TX hash!', HttpStatus.BAD_REQUEST);
